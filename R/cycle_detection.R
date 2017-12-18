@@ -131,6 +131,7 @@ SelectGenesOnGraph <- function(
   # Gene selection
   GeneSelMode = "SmoothOnCircleNodes",
   AddGenePerc = 5,
+  VarQuantExp = .5,
   SelThr1 = .95,
   SelThr2 = .99,
   MadsThr =  1,
@@ -348,6 +349,7 @@ SelectGenesOnGraph <- function(
 
   if(AddGenePerc == 0){
     CONVERGED2 <- TRUE
+    print("Feature expansion will be skipped")
   }
   
   while(!CONVERGED2){
@@ -369,11 +371,16 @@ SelectGenesOnGraph <- function(
 
     print("Selecting genes for the expansion set")
 
+    
+    
     tictoc::tic()
     if(Do.LogPC){
+      
+      VarVect <- apply(log10(DataSet[!ToFilter, ] + 1), 2, var)
+
       GenesThr <- SelectGenes(Partition = Partition$Partition,
                               Net = Net,
-                              ExpMat = log10(DataSet[!ToFilter, ] + 1),
+                              ExpMat = log10(DataSet[!ToFilter, VarVect > quantile(VarVect, VarQuantExp)] + 1),
                               Mode = GeneSelMode,
                               AggFun = SelGeneAggFun,
                               Span = Span,
@@ -381,9 +388,12 @@ SelectGenesOnGraph <- function(
                               ProjStruct = ProjStruct,
                               nCores = nCores)
     } else {
+      
+      VarVect <- apply(DataSet[!ToFilter, ], 2, var)
+      
       GenesThr <- SelectGenes(Partition = Partition$Partition,
                               Net = Net,
-                              ExpMat = DataSet[!ToFilter, ],
+                              ExpMat = DataSet[!ToFilter, VarVect > quantile(VarVect, VarQuantExp)],
                               Mode = GeneSelMode,
                               AggFun = SelGeneAggFun,
                               Span = Span,
