@@ -8,31 +8,14 @@
 
 #' Title
 #'
-#' @param DataSet
-#' @param GeneSet
-#' @param OutThr
-#' @param VarThr
 #' @param nNodes
-#' @param Log
-#' @param Categories
-#' @param Filter
 #' @param GraphType
 #' @param PlanVarLimit
 #' @param PlanVarLimitIC
-#' @param MinBranDiff
 #' @param InitStructNodes
-#' @param ForceLasso
-#' @param DipPVThr
-#' @param MinProlCells
-#' @param PCAFilter
-#' @param OutThrPCA
-#' @param EstProlif
-#' @param QuaThr
+#' @param DataMat 
+#' @param nCores 
 #' @param NonG0Cell
-#' @param PCACenter
-#' @param PCAProjCenter
-#' @param PlotDebug
-#' @param PlotIntermediate
 #'
 #' @return
 #' @export
@@ -146,7 +129,7 @@ SelectGenesOnGraph <- function(
   PlanVarLimitIC = .9,
   InitStructNodes = 20,
   # Gene selection
-  GeneSelMode = "CV",
+  GeneSelMode = "SmoothOnCircleNodes",
   AddGenePerc = 5,
   SelThr1 = .95,
   SelThr2 = .99,
@@ -363,6 +346,10 @@ SelectGenesOnGraph <- function(
 
   CONVERGED2 <- FALSE
 
+  if(AddGenePerc == 0){
+    CONVERGED2 <- TRUE
+  }
+  
   while(!CONVERGED2){
 
     ######### WORK HERE
