@@ -1,0 +1,19 @@
+Package: ElPiCycle
+Type: Package
+Title: An r package to study cell cycle in RNA-Seq data
+Version: 0.0.0.1000
+Authors@R: person("Luca", "Albergante", email = "luca.albergante@gmail.com", role = c("aut", "cre"))
+Description: An r package to study cell cycle in RNA-Seq data via pincipal graphs.
+License: Apache License 3.0
+LazyData: TRUE
+Depends:
+    ElPiGraph.R
+Imports:
+    ggplot2,
+    igraph,
+    scater,
+    readr,
+    magrittr,
+    parallel
+VignetteBuilder: knitr
+RoxygenNote: 6.0.1
