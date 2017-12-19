@@ -130,6 +130,8 @@ SelectGenesOnGraph <- function(
   InitStructNodes = 20,
   # Gene selection
   GeneSelMode = "SmoothOnCircleNodes",
+  FeatureSelection = TRUE,
+  FeatureExpansion = TRUE,
   AddGenePerc = 5,
   VarQuantExp = .5,
   SelThr1 = .95,
@@ -202,7 +204,18 @@ SelectGenesOnGraph <- function(
 
   if(Do.PCA){
     PCAData <- prcomp(FiltExpmat, retx = TRUE, scale. = FALSE, center = Center.PCA)
-    FiltExpmat <- PCAData$x
+    
+    if(VarThr < 1){
+      Max <- min(which((cumsum((PCAData$sdev)^2)/sum((PCAData$sdev)^2))>VarThr))
+      if(Max == 1){
+        Max <- 3
+      }
+    } else {
+      Max <- ncol(PCAData$x)
+    }
+    
+    print(paste("Using", Max, "PCs"))
+    FiltExpmat <- PCAData$x[,1:Max]
   }
 
   Steps[[1]] <- ProjectAndCompute(DataMat = FiltExpmat,
@@ -225,6 +238,11 @@ SelectGenesOnGraph <- function(
   CONVERGED <- FALSE
   i = 2
 
+  if(!FeatureSelection){
+    CONVERGED <- TRUE
+    print("Feature selection will be skipped")
+  }
+  
   while(!CONVERGED){
 
     print("Phase I - Contraction")
@@ -314,8 +332,21 @@ SelectGenesOnGraph <- function(
     }
 
     if(Do.PCA){
+      
       PCAData <- prcomp(FiltExpmat, retx = TRUE, scale. = FALSE, center = Center.PCA)
-      FiltExpmat <- PCAData$x
+      
+      if(VarThr < 1){
+        Max <- min(which((cumsum((PCAData$sdev)^2)/sum((PCAData$sdev)^2))>VarThr))
+        if(Max == 1){
+          Max <- 3
+        }
+      } else {
+        Max <- ncol(PCAData$x)
+      }
+      
+      print(paste("Using", Max, "PCs"))
+      FiltExpmat <- PCAData$x[,1:Max]
+      
     }
 
     Steps[[i]] <- ProjectAndCompute(DataMat = FiltExpmat,
@@ -347,7 +378,7 @@ SelectGenesOnGraph <- function(
 
   CONVERGED2 <- FALSE
 
-  if(AddGenePerc == 0){
+  if(!FeatureExpansion){
     CONVERGED2 <- TRUE
     print("Feature expansion will be skipped")
   }
@@ -447,7 +478,18 @@ SelectGenesOnGraph <- function(
 
     if(Do.PCA){
       PCAData <- prcomp(FiltExpmat, retx = TRUE, scale. = FALSE, center = Center.PCA)
-      FiltExpmat <- PCAData$x
+      
+      if(VarThr < 1){
+        Max <- min(which((cumsum((PCAData$sdev)^2)/sum((PCAData$sdev)^2))>VarThr))
+        if(Max == 1){
+          Max <- 3
+        }
+      } else {
+        Max <- ncol(PCAData$x)
+      }
+      
+      print(paste("Using", Max, "PCs"))
+      FiltExpmat <- PCAData$x[,1:Max]
     }
 
     Steps[[i]] <- ProjectAndCompute(DataMat = FiltExpmat,
@@ -478,10 +520,15 @@ SelectGenesOnGraph <- function(
   abline(v=1.5)
 
   if(Do.PCA){
+    if(Center.PCA){
+      RetCent <- PCAData$center[1:Max]
+    } else {
+      RetCent <- PCAData$center
+    }
     return(list(Genes = UsedGenes, PGStructs = Steps,
                 FinalStruct = Steps[[i-1]]$FitData[[length(Steps[[i-1]]$FitData)]],
                 FinalExpMat = FiltExpmat, FinalGroup = FiltCat,
-                PCARotation = PCAData$rotation, PCACenter = PCAData$center))
+                PCARotation = PCAData$rotation[, 1:Max], PCACenter = RetCent))
   } else {
     return(list(Genes = UsedGenes, PGStructs = Steps,
                 FinalStruct = Steps[[i-1]]$FitData[[length(Steps[[i-1]]$FitData)]],

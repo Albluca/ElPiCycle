@@ -5,8 +5,9 @@
 \title{Title}
 \usage{
 PlotOnStages(Structure, PrinStruct, ExpData, SelThr = NULL,
-  SmoothPoints.Growth = 1, SmoothPoints.Srink = 1, ComputeOverlaps = TRUE,
-  nGenes = 10, OrderOnCat = FALSE, MinCellPerNode = 3, Title = "")
+  SmoothPoints.Growth = 1, SmoothPoints.Shrink = 1,
+  ComputeOverlaps = TRUE, nGenes = 10, OrderOnCat = FALSE,
+  MinCellPerNode = 3, Title = "")
 }
 \arguments{
 \item{ExpData}{}

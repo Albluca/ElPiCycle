@@ -9,7 +9,11 @@ ProjectAndCompute(DataMat, nNodes = 30, GraphType = "Circle",
   nCores = 1, NonG0Cell)
 }
 \arguments{
-\item{PlotIntermediate}{}
+\item{DataMat}{}
+
+\item{nCores}{}
+
+\item{NonG0Cell}{}
 }
 \description{
 Title

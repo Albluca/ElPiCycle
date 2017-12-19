@@ -10,10 +10,10 @@ SelectGenesOnGraph(DataSet, StartSet, Categories = NULL,
   EstProlif = "MeanPerc", QuaThr = 0.5, MinProlCells = 50,
   Do.LogPC = TRUE, Do.PCA = TRUE, Center.PCA = FALSE, VarThr = 0.99,
   nNodes = 40, GraphType = "Circle", PlanVarLimit = 0.85,
-  PlanVarLimitIC = 0.9, InitStructNodes = 20, GeneSelMode = "CV",
-  AddGenePerc = 5, SelThr1 = 0.95, SelThr2 = 0.99, MadsThr = 1,
-  SelGeneThr = NULL, SelGeneAggFun = median, Span = 0.5, nCores = 1,
-  Title = "")
+  PlanVarLimitIC = 0.9, InitStructNodes = 20,
+  GeneSelMode = "SmoothOnCircleNodes", AddGenePerc = 5, VarQuantExp = 0.5,
+  SelThr1 = 0.95, SelThr2 = 0.99, MadsThr = 1, SelGeneThr = NULL,
+  SelGeneAggFun = median, Span = 0.5, nCores = 1, Title = "")
 }
 \arguments{
 \item{Title}{}

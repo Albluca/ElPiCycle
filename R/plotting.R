@@ -226,8 +226,13 @@ PlotOnStages <- function(Structure,
   print("Step II")
 
   ExtendedTB <- TB[,names(SelPath)]
+  
+  ExtendedTB <- matrix(ExtendedTB, ncol = length(SelPath))
+  
+  colnames(ExtendedTB) <- names(SelPath)
+  rownames(ExtendedTB) <- rownames(TB)
 
-  if(OrderOnCat){
+  if(OrderOnCat & nrow(ExtendedTB)>1){
     barplot(t(t(ExtendedTB)/colSums(ExtendedTB)), col = rainbow(nrow(TB)), beside = TRUE, las = 2,
             legend.text = rownames(ExtendedTB), args.legend = list(x = "top", fill=rainbow(nrow(TB))),
             ylim = c(0, 1.25), yaxt = "n")
@@ -238,7 +243,8 @@ PlotOnStages <- function(Structure,
 
   # SelPath <- SelPath[-length(SelPath)]
   SelPathSTG <- rep(NA, length(SelPath))
-
+  
+  
   PercMat <- t(t(ExtendedTB)/colSums(ExtendedTB))
   PercMat[is.na(PercMat)] <- 0
   PercMat[,colSums(ExtendedTB) < MinCellPerNode] <- 0
@@ -457,7 +463,7 @@ PlotOnStages <- function(Structure,
     AllCat <- rownames(BinPercMatExt)
   }
 
-  if(!is.null(dim(BinPercMatExt))){
+  if(nrow(BinPercMatExt)>1){
     Idxs <- apply(BinPercMatExt, 1, which)
   } else {
     Idxs <- list(Cat = which(BinPercMatExt))
@@ -493,9 +499,13 @@ PlotOnStages <- function(Structure,
   }
 
   if(Structure == 'Circle'){
+    EdgSeq <- colnames(BinPercMatExt)[c(1:ncol(BinPercMatExt), 1)]
     BinPercMatExt <- BinPercMatExt[, c(1:ncol(BinPercMatExt), 1)]
+    dim(BinPercMatExt) <- c(length(BinPercMatExt)/length(EdgSeq), length(EdgSeq))
+    colnames(BinPercMatExt) <- EdgSeq
+    
     Pt <- ElPiGraph.R::getPseudotime(Edges = PrinStruct$FinalStruct$Edges$Edges, ProjStruct = ProjStruct,
-                                  EdgeSeq = colnames(BinPercMatExt))
+                                  EdgeSeq = EdgSeq)
   }
 
 
