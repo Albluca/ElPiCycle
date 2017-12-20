@@ -80,7 +80,7 @@ SelectGenes <- function(Partition,
     
     if(nCores <= 1){
       
-      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(Sorted), "pseudotime points on a single processor. This may take a while ..."))
       
       tictoc::tic()
       
@@ -104,7 +104,7 @@ SelectGenes <- function(Partition,
         print("Using all the cores available. This will likely render the system unresponsive untill the operation has concluded ...")
       }
       
-      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
+      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(Sorted), "pseudotime points using", nCores, "processors. This may take a while ..."))
       
       tictoc::tic()
       cl <- parallel::makeCluster(nCores)

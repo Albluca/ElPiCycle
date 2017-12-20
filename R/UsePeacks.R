@@ -79,7 +79,7 @@ GetGenesWithPeaks <- function(DataStruct,
 
     if(nCores <= 1){
 
-      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(Sorted), "pseudotime points on a single processor. This may take a while ..."))
       
       tictoc::tic()
       AllFit <- apply(ExpMat[names(Sorted),GeneSel], 2, FitFun)
@@ -98,7 +98,7 @@ GetGenesWithPeaks <- function(DataStruct,
         print("Using all the cores available. This will likely render the system unresponsive untill the operation has concluded ...")
       }
 
-      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(Sorted), "pseudotime points using", nCores, "processors. This may take a while ..."))
 
       tictoc::tic()
       cl <- parallel::makeCluster(nCores)
@@ -542,7 +542,7 @@ StageWithPeaks <- function(DataStruct,
     
     if(nCores <= 1){
       
-      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(Sorted), "pseudotime points on a single processor. This may take a while ..."))
       
       op <- pboptions(type = "timer")
       PredMat <- pbapply::pbapply(ExpMat[names(Sorted),GeneSel], 2, FitFun)
@@ -561,7 +561,7 @@ StageWithPeaks <- function(DataStruct,
         print("Using all the cores available. This will likely render the system unresponsive untill the operation has concluded ...")
       }
       
-      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(Sorted), "pseudotime points using", nCores, "processors. This may take a while ..."))
       
       tictoc::tic()
       cl <- parallel::makeCluster(nCores)
