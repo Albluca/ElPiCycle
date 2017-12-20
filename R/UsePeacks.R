@@ -19,7 +19,7 @@ GetGenesWithPeaks <- function(DataStruct,
                               Thr = .9,
                               QuantSel = .75,
                               Span =.3,
-                              MaxPsCV = 1,
+                              MaxPsCV = Inf,
                               nCores = 1) {
 
 
@@ -38,10 +38,15 @@ GetGenesWithPeaks <- function(DataStruct,
     ExpMat <- DataStruct$ExpMat[, rownames(DataStruct$ExpMat) %in% names(ProcStruct$CellsPT)]
     PathLen <- ProcStruct$NodesPT[length(ProcStruct$NodesPT)]
 
+    TopPT <- sort(ProcStruct$CellsPT, decreasing = FALSE)[1:ceiling(length(ProcStruct$CellsPT)*Span)]
+    LowPT <- sort(ProcStruct$CellsPT, decreasing = TRUE)[1:ceiling(length(ProcStruct$CellsPT)*Span)]
+    
+    NewSpan <- Span/(1+2*Span)
+    
     ExtPT <- c(
-      ProcStruct$CellsPT - PathLen,
+      TopPT + PathLen,
       ProcStruct$CellsPT,
-      ProcStruct$CellsPT + PathLen
+      LowPT - PathLen
     )
 
     # Selected <- (ExtPT >= - PathLen*Span) &
@@ -56,22 +61,29 @@ GetGenesWithPeaks <- function(DataStruct,
     # SortedSelCellID <- SelCellID[Sorted$ix]
 
     NodesPT <- ProcStruct$NodesPT
-
-    FitFun <- function(x){
-
-      LocDF <- data.frame(Exp = x, PT = Sorted)
-      LOE <- loess(Exp ~ PT, LocDF, span = Span)
-      predict(LOE, data.frame(PT = NodesPT), se = TRUE)
-
+    
+    if(MaxPsCV < Inf){
+      FitFun <- function(x){
+        LOE <- loess(x ~ Sorted, span = NewSpan)
+        predict(LOE, data.frame(Sorted = NodesPT), se = TRUE)
+      }
+    } else {
+      FitFun <- function(x){
+        LOE <- loess(x ~ Sorted, span = NewSpan)
+        predict(LOE, data.frame(Sorted = NodesPT), se = FALSE)
+      }
     }
-
+    
     GeneVar <- apply(ExpMat, 2, var)
     GeneSel <- GeneVar >= quantile(GeneVar, QuantSel)
 
     if(nCores <= 1){
 
       print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      
+      tictoc::tic()
       AllFit <- apply(ExpMat[names(Sorted),GeneSel], 2, FitFun)
+      tictoc::toc()
 
     } else {
 
@@ -88,19 +100,28 @@ GetGenesWithPeaks <- function(DataStruct,
 
       print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
 
+      tictoc::tic()
       cl <- parallel::makeCluster(nCores)
 
-      parallel::clusterExport(cl=cl, varlist=c("Sorted", "Span", "NodesPT"),
+      parallel::clusterExport(cl=cl, varlist=c("Sorted", "NewSpan", "NodesPT"),
                               envir = environment())
 
       AllFit <- parallel::parApply(cl, ExpMat[names(Sorted),GeneSel], 2, FitFun)
 
       parallel::stopCluster(cl)
+      tictoc::toc()
 
     }
 
-    PredMat <- sapply(AllFit, function(x){x$fit})
-    PseudoCVMat <- sapply(AllFit, function(x){x$se.fit/x$fit})
+    if(MaxPsCV < Inf){
+      PredMat <- sapply(AllFit, function(x){x$fit})
+      PseudoCVMat <- sapply(AllFit, function(x){x$se.fit/x$fit})
+      BinMat.CV <- (PseudoCVMat <= MaxPsCV)
+    } else {
+      PredMat <- AllFit
+    }
+    
+    
 
     PredMat <- apply(PredMat, 2, function(x){
        x <- (x - min(x))
@@ -111,10 +132,10 @@ GetGenesWithPeaks <- function(DataStruct,
     BinMat.UP <- (PredMat >= Thr)
     BinMat.DOWN <- (PredMat <= 1-Thr)
 
-    BinMat.CV <- (PseudoCVMat <= MaxPsCV)
-
-    BinMat.UP <- BinMat.UP & BinMat.CV
-    BinMat.DOWN <- BinMat.DOWN & BinMat.CV
+    if(MaxPsCV < Inf){
+      BinMat.UP <- BinMat.UP & BinMat.CV
+      BinMat.DOWN <- BinMat.DOWN & BinMat.CV
+    }
 
     BinMat.UP <- BinMat.UP[,colSums(BinMat.UP) > MinNodes]
     BinMat.DOWN <- BinMat.DOWN[,colSums(BinMat.DOWN) > MinNodes]
@@ -444,7 +465,7 @@ StageWithPeaks <- function(DataStruct,
                            Span = .2,
                            nCores = 1,
                            # Thr = .9,
-                           MaxPsCV = 2,
+                           # MaxPsCV = 2,
                            FullStaging = FALSE
                               ) {
 
@@ -476,12 +497,17 @@ StageWithPeaks <- function(DataStruct,
     GeneSel <- GeneVar >= quantile(GeneVar, QuantSel)
     GeneSel <- GeneSel & (colnames(ExpMat) %in% GenesToUse)
 
+    TopPT <- sort(ProcStruct$CellsPT, decreasing = FALSE)[1:ceiling(length(ProcStruct$CellsPT)*Span)]
+    LowPT <- sort(ProcStruct$CellsPT, decreasing = TRUE)[1:ceiling(length(ProcStruct$CellsPT)*Span)]
+    
+    NewSpan <- Span/(1+2*Span)
+    
     ExtPT <- c(
-      ProcStruct$CellsPT - PathLen,
+      TopPT + PathLen,
       ProcStruct$CellsPT,
-      ProcStruct$CellsPT + PathLen
+      LowPT - PathLen
     )
-
+    
     # Selected <- (ExtPT >= - PathLen*Span) &
     #   (ExtPT <= PathLen + PathLen*Span)
 
@@ -499,18 +525,64 @@ StageWithPeaks <- function(DataStruct,
     # UpdatedSpan <- length(ProcStruct$CellsPT)*Span/sum(Selected)
 
     FitFun <- function(x){
-
-      LocDF <- data.frame(Exp = x, PT = Sorted)
-      LOE <- loess(Exp ~ PT, LocDF, span = Span)
-      predict(LOE, data.frame(PT = NodesPT), se = TRUE)
-
+      LOE <- loess(x ~ Sorted, span = NewSpan)
+      predict(LOE, data.frame(Sorted = NodesPT), se = FALSE)
     }
+    
+    # if(MaxPsCV < Inf){
+    #   FitFun <- function(x){
+    #     LOE <- loess(x ~ Sorted, span = NewSpan)
+    #     predict(LOE, data.frame(Sorted = NodesPT), se = TRUE)
+    #   }
+    # } else {
+    #   
+    # }
+    
+    
+    
+    if(nCores <= 1){
+      
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      
+      op <- pboptions(type = "timer")
+      PredMat <- pbapply::pbapply(ExpMat[names(Sorted),GeneSel], 2, FitFun)
+      pboptions(op)
+     
+    } else {
+      
+      no_cores <- parallel::detectCores()
+      
+      if(nCores > no_cores){
+        nCores <- no_cores
+        print(paste("Too many cores selected!", nCores, "will be used"))
+      }
+      
+      if(nCores == no_cores){
+        print("Using all the cores available. This will likely render the system unresponsive untill the operation has concluded ...")
+      }
+      
+      print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
+      
+      tictoc::tic()
+      cl <- parallel::makeCluster(nCores)
+      
+      parallel::clusterExport(cl=cl, varlist=c("Sorted", "NewSpan", "NodesPT"),
+                              envir = environment())
+      parallel::clusterSetRNGStream(cl, iseed = 0L)
+      
+      AllFit <- pbapply::pbapply(ExpMat[names(Sorted),GeneSel], 2, FitFun, cl = cl)
+      # AllFit <- parallel::parApply(cl, ExpMat[names(Sorted),GeneSel], 2, FitFun)
+      
+      parallel::stopCluster(cl)
+      tictoc::toc()
+      
+    }
+    
 
-    print(paste("Computing loess smoothers on", sum(GeneSel), "genes and", nrow(ExpMat), "pseudotime points on a single processor. This may take a while ..."))
-    AllFit <- apply(ExpMat[names(Sorted),GeneSel], 2, FitFun)
-
-    PredMat <- sapply(AllFit, function(x){x$fit})
-    PseudoCVMat <- sapply(AllFit, function(x){x$se.fit/x$fit})
+    # PredMat <- sapply(AllFit, function(x){x$})
+    # if(MaxPsCV < Inf){
+    #   PseudoCVMat <- sapply(AllFit, function(x){x$se.fit/x$fit})
+    # }
 
     PredMat <- apply(PredMat, 2, function(x){
       x <- (x - min(x))
@@ -616,7 +688,7 @@ StageWithPeaks <- function(DataStruct,
 
       MeanExp <- apply(ExpMat[, colnames(ExpMat) %in% CCGenes], 1, mean)
 
-      SmoothMGE <- FitFun(x = MeanExp[names(Sorted)])$fit
+      SmoothMGE <- FitFun(x = MeanExp[names(Sorted)])
       SmoothMGE <- SmoothMGE-min(SmoothMGE)
       SmoothMGE <- SmoothMGE - quantile(SmoothMGE, G0Level)
       SmoothMGE[SmoothMGE > 0] <- 0

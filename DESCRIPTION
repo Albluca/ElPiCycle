@@ -14,6 +14,7 @@ Imports:
     scater,
     readr,
     magrittr,
-    parallel
+    parallel,
+    pbapplay
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1

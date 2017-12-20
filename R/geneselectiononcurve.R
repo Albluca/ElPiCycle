@@ -55,55 +55,70 @@ SelectGenes <- function(Partition,
 
     Pt <- ElPiGraph.R::getPseudotime(Edges = Edges, ProjStruct = ProjStruct, EdgeSeq = c(NodeOrder, NodeOrder[1]))
 
-    ExtPT <- c(Pt$Pt - Pt$PathLen, Pt$Pt, Pt$Pt + Pt$PathLen)
+    NodesPT <- Pt$NodePos
+    CellPT <- Pt$Pt
+    names(CellPT) <- rownames(ExpMat)
+    
+    TopPT <- sort(CellPT, decreasing = FALSE)[1:ceiling(length(CellPT)*Span)]
+    LowPT <- sort(CellPT, decreasing = TRUE)[1:ceiling(length(CellPT)*Span)]
+    
+    NewSpan <- Span/(1+2*Span)
+    
 
-    Selected <- ExtPT >= 0 - Pt$PathLen*Span & ExtPT <= Pt$PathLen + Pt$PathLen*Span
-
-    ExtPT <- ExtPT[Selected]
-    SelCellID <- rep(1:nrow(ExpMat), 3)[Selected]
-
-    Sorted <- sort(ExtPT, index.return=TRUE)
-    SortedSelCellID <- SelCellID[Sorted$ix]
-
+    ExtPT <- c(
+      TopPT + Pt$PathLen,
+      CellPT,
+      LowPT - Pt$PathLen
+    )
+    
+    Sorted <- sort(ExtPT)
+  
     FitFun <- function(x){
-
-      LocDF <- data.frame(Exp = x[SortedSelCellID], PT = Sorted$x)
-
-      LOE <- loess(Exp ~ PT, LocDF, span = Span)
-      predict(LOE, data.frame(PT = Pt$NodePos), se = TRUE)
-
+      LOE <- loess(x ~ Sorted, span = NewSpan)
+      predict(LOE, data.frame(Sorted = NodesPT), se = TRUE)
     }
-
+    
     if(nCores <= 1){
-
-      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", sum(Selected), "pseudotime points on a single processor. This may take a while ..."))
-      AllFit <- apply(ExpMat, 2, FitFun)
-
+      
+      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(NodesPT), "pseudotime points on a single processor. This may take a while ..."))
+      
+      tictoc::tic()
+      
+      op <- pboptions(type = "timer")
+      PredMat <- pbapply::pbapply(ExpMat[names(Sorted),], 2, FitFun)
+      pboptions(op)
+      
+      
+      tictoc::toc()
+      
     } else {
-
+      
       no_cores <- parallel::detectCores()
-
+      
       if(nCores > no_cores){
         nCores <- no_cores
         print(paste("Too many cores selected!", nCores, "will be used"))
       }
-
+      
       if(nCores == no_cores){
         print("Using all the cores available. This will likely render the system unresponsive untill the operation has concluded ...")
       }
-
-      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", sum(Selected), "pseudotime points using", nCores, "processors. This may take a while ..."))
-
+      
+      print(paste("Computing loess smoothers on", ncol(ExpMat), "genes and", length(NodesPT), "pseudotime points using", nCores, "processors. This may take a while ..."))
+      
+      tictoc::tic()
       cl <- parallel::makeCluster(nCores)
-
-      parallel::clusterExport(cl=cl, varlist=c("SortedSelCellID", "Sorted", "Span"),
+      
+      parallel::clusterExport(cl=cl, varlist=c("Sorted", "NewSpan", "NodesPT"),
                               envir = environment())
-
-      AllFit <- parallel::parApply(cl, ExpMat, 2, FitFun)
-
+      parallel::clusterSetRNGStream(cl, iseed = 0L)
+      AllFit <- pbapply::pbapply(ExpMat[names(Sorted),], 2, FitFun, cl = cl)
+      # AllFit <- parallel::parApply(cl, ExpMat[names(Sorted),], 2, FitFun)
       parallel::stopCluster(cl)
-
+      tictoc::toc()
+      
     }
+    
 
     RetVal <- lapply(AllFit, function(x){x$se.fit/x$fit}) %>%
       sapply(., AggFun)
